@@ -34,7 +34,16 @@ class ClearCache {
 	function engines() {
 		$result = array();
 
-		$keys = Cache::configured();
+		if (method_exists('Cache', 'configured')) {
+			$keys = Cache::configured();
+		} else {
+			if (PHP5) {
+				$Cache = Cache::getInstance();
+			} else {
+				$Cache =& Cache::getInstance();
+			}
+			$keys = array_keys($Cache->__config);
+		}
 
 		if ($engines = func_get_args()) {
 			$keys = array_intersect($keys, $engines);
@@ -74,6 +83,14 @@ class ClearCache {
 					$deleted[] = $file;
 				} else {
 					$error[] = $file;
+				}
+			} elseif(is_dir($file)) {
+				$results = $this->files(substr($file, strlen(CACHE)));
+				$deleted = am($deleted, $results['deleted']);
+				$error = am($error, $results['error']);
+				unset($results);
+				if (!in_array($file, array(CACHE . './models', CACHE . './persistent', CACHE . './views'))) {
+					rmdir($file);
 				}
 			}
 		}
